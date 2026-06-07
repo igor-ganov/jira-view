@@ -1,12 +1,6 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { DRAG_MIME, type JiraIssue, type StatusCategory } from '@/features/jira/types';
-
-const CATEGORY_COLORS: Record<StatusCategory, { bg: string; fg: string }> = {
-  new: { bg: '#dfe1e6', fg: '#42526e' },
-  indeterminate: { bg: '#deebff', fg: '#0747a6' },
-  done: { bg: '#e3fcef', fg: '#006644' },
-};
+import { DRAG_MIME, type JiraIssue } from '@/features/jira/types';
 
 /**
  * Presentational issue row. Emits `open-issue` (summary click) and
@@ -28,57 +22,99 @@ export class IssueCard extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.625rem;
-      padding: 0.625rem 0.75rem;
-      background: #fff;
-      border: 1px solid #dfe1e6;
-      border-radius: 6px;
-    }
-    :host([selected]) .card {
-      border-color: #0052cc;
-      box-shadow: inset 0 0 0 1px #0052cc;
-    }
-    .card {
+      padding: 0.75rem 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       cursor: grab;
+      transition:
+        border-color 0.15s,
+        transform 0.05s;
+    }
+    .card:active {
+      cursor: grabbing;
     }
     .card.dragging {
-      opacity: 0.4;
+      opacity: 0.45;
     }
-    .key {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #5e6c84;
-      white-space: nowrap;
+    :host([selected]) .card {
+      border-color: var(--accent);
+      box-shadow:
+        var(--shadow),
+        inset 0 0 0 1px var(--accent);
+    }
+    input[type='checkbox'] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      flex: none;
+      cursor: pointer;
+    }
+    .body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+      flex: 1;
     }
     .summary {
-      flex: 1;
       text-align: left;
       background: none;
       border: none;
       font: inherit;
-      color: #172b4d;
+      font-size: 0.9rem;
+      color: var(--text);
       cursor: pointer;
       padding: 0;
-    }
-    .summary:hover {
-      text-decoration: underline;
-    }
-    .badge {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      padding: 0.125rem 0.5rem;
-      border-radius: 3px;
+      min-height: 24px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .assignee {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #dfe1e6;
+    .summary:hover {
+      color: var(--accent);
     }
-    input {
-      width: 16px;
-      height: 16px;
+    .key {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex: none;
+    }
+    .cat-new {
+      background: var(--cat-new-bg);
+      color: var(--cat-new-fg);
+    }
+    .cat-indeterminate {
+      background: var(--cat-prog-bg);
+      color: var(--cat-prog-fg);
+    }
+    .cat-done {
+      background: var(--cat-done-bg);
+      color: var(--cat-done-fg);
+    }
+    .assignee {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      flex: none;
+      object-fit: cover;
+    }
+    @media (max-width: 460px) {
+      .assignee {
+        display: none;
+      }
     }
   `;
 
@@ -116,40 +152,38 @@ export class IssueCard extends LitElement {
   }
 
   override render() {
-    const color = CATEGORY_COLORS[this.issue.status.category];
+    const issue = this.issue;
     return html`
       <div
         class=${this.dragging ? 'card dragging' : 'card'}
         data-testid="issue-card"
-        data-issue-key=${this.issue.key}
-        data-status=${this.issue.status.name}
+        data-issue-key=${issue.key}
+        data-status=${issue.status.name}
       >
         ${
           this.selectable
             ? html`<input
               type="checkbox"
               data-testid="issue-select"
-              aria-label=${`Select ${this.issue.key}`}
+              aria-label=${`Select ${issue.key}`}
               .checked=${this.selected}
               @change=${this.onSelect}
             />`
             : nothing
         }
-        <span class="key">${this.issue.key}</span>
-        <button type="button" class="summary" data-testid="issue-open" @click=${this.onOpen}>
-          ${this.issue.summary}
-        </button>
-        <slot name="actions"></slot>
-        <span
-          class="badge"
-          data-testid="issue-status"
-          style=${`background:${color.bg};color:${color.fg}`}
-        >
-          ${this.issue.status.name}
+        <div class="body">
+          <span class="key">${issue.key}</span>
+          <button type="button" class="summary" data-testid="issue-open" @click=${this.onOpen}>
+            ${issue.summary}
+          </button>
+        </div>
+        <span class="badge cat-${issue.status.category}" data-testid="issue-status">
+          ${issue.status.name}
         </span>
+        <slot name="actions"></slot>
         ${
-          this.issue.assignee?.avatarUrl
-            ? html`<img class="assignee" src=${this.issue.assignee.avatarUrl} alt=${this.issue.assignee.displayName} />`
+          issue.assignee?.avatarUrl
+            ? html`<img class="assignee" src=${issue.assignee.avatarUrl} alt=${issue.assignee.displayName} />`
             : html`<span class="assignee" aria-hidden="true"></span>`
         }
       </div>

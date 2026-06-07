@@ -18,17 +18,12 @@ export class JiraProjects extends LitElement {
       display: block;
       font: inherit;
     }
-    .site {
-      margin: 0 0 1rem;
-      color: #5e6c84;
-      font-size: 0.875rem;
-    }
     ul {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
-      gap: 0.5rem;
+      gap: 0.6rem;
     }
     li {
       display: flex;
@@ -36,35 +31,52 @@ export class JiraProjects extends LitElement {
     a {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.85rem;
       flex: 1;
-      padding: 0.75rem 1rem;
-      border: 1px solid #dfe1e6;
-      border-radius: 8px;
-      background: #fff;
-      color: inherit;
+      min-height: 56px;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--text);
       text-decoration: none;
+      transition:
+        border-color 0.15s,
+        transform 0.05s;
     }
     a:hover {
-      border-color: #0052cc;
+      border-color: var(--accent);
+    }
+    a:active {
+      transform: scale(0.99);
+    }
+    a:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
     }
     img {
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
     }
     .key {
-      font-weight: 600;
-      color: #172b4d;
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
     }
     .type {
       margin-left: auto;
-      font-size: 0.75rem;
-      color: #5e6c84;
+      font-size: 0.72rem;
+      color: var(--text-muted);
       text-transform: capitalize;
+      background: var(--surface-2);
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
     }
     .error {
-      color: #bf2600;
+      color: var(--danger);
     }
   `;
 

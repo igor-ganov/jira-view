@@ -40,13 +40,14 @@ test.describe('board read views', () => {
     await expectText(page, future.locator('[data-testid="empty"]'), 'No issues');
   });
 
-  test('Kanban board groups issues into status columns', async ({ page }) => {
+  test('Kanban board shows all issues as a flat task list', async ({ page }) => {
     await visit(page, '/projects/KAN');
-    await expectCount(page, page.locator('[data-testid="board-column"]'), 3);
-    const todo = page.locator('[data-testid="board-column"][data-column-name="To Do"]');
-    await expectCount(page, todo.locator('[data-testid="issue-card"]'), 2);
-    const inProgress = page.locator('[data-testid="board-column"][data-column-name="In Progress"]');
-    await expectCount(page, inProgress.locator('[data-testid="issue-card"]'), 1);
+    await expectVisible(page, page.locator('[data-testid="board-section"]'));
+    await expectCount(
+      page,
+      page.locator('[data-testid="board-section"] [data-testid="issue-card"]'),
+      4,
+    );
   });
 
   test('a 401 from Jira shows a scope error, not a re-login loop', async ({ page }) => {

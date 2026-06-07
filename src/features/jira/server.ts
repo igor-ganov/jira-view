@@ -56,7 +56,7 @@ export const resolveJiraContext = async (
 /** Map a thrown error to a JSON Response with the appropriate HTTP status. */
 export const toErrorResponse = (cause: unknown): Response => {
   if (cause instanceof JiraApiError) {
-    console.error('[jira-error]', cause.status, cause.body);
+    console.error('[jira-error]', cause.status, cause.path, cause.body);
     const status = cause.status === 401 ? 401 : cause.status === 403 ? 403 : cause.status;
     const code =
       cause.status === 401

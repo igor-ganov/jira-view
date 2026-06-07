@@ -24,57 +24,98 @@ export class IssueDetailDrawer extends LitElement {
     .backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(9, 30, 66, 0.54);
+      background: color-mix(in srgb, #0b0e13 55%, transparent);
       display: flex;
       justify-content: flex-end;
-      z-index: 20;
+      z-index: 40;
     }
     .panel {
-      width: min(28rem, 100%);
+      width: min(30rem, 100%);
       height: 100%;
-      background: #fff;
-      padding: 1.5rem;
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.5rem max(1.25rem, env(safe-area-inset-right)) 2rem 1.25rem;
       overflow-y: auto;
-      box-shadow: -8px 0 24px rgba(9, 30, 66, 0.25);
+      box-shadow: var(--shadow-lg);
+      animation: slide-in 0.2s ease;
+    }
+    @keyframes slide-in {
+      from {
+        transform: translateX(2rem);
+        opacity: 0;
+      }
+    }
+    @media (max-width: 560px) {
+      .backdrop {
+        align-items: flex-end;
+      }
+      .panel {
+        width: 100%;
+        height: auto;
+        max-height: 88vh;
+        border-radius: var(--radius) var(--radius) 0 0;
+        animation: slide-up 0.22s ease;
+      }
+      @keyframes slide-up {
+        from {
+          transform: translateY(2rem);
+          opacity: 0;
+        }
+      }
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1rem;
+      margin-bottom: 1.1rem;
     }
     .key {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: #5e6c84;
+      font-size: 0.8rem;
+      font-weight: 650;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
     }
     .close {
       font: inherit;
       border: none;
-      background: none;
-      font-size: 1.25rem;
+      background: var(--surface-2);
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      font-size: 1.1rem;
       cursor: pointer;
-      color: #5e6c84;
+      color: var(--text);
+    }
+    .close:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
     }
     h2 {
-      font-size: 1.1rem;
-      margin: 0 0 1rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 0 0 1.25rem;
     }
     dl {
       display: grid;
       grid-template-columns: 7rem 1fr;
-      gap: 0.5rem 1rem;
+      gap: 0.85rem 1rem;
       margin: 0;
+      align-items: center;
     }
     dt {
-      color: #5e6c84;
-      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
     }
     dd {
       margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
     }
     .error {
-      color: #bf2600;
+      color: var(--danger);
     }
   `;
 

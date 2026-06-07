@@ -11,7 +11,6 @@ import './status-select';
 import './bulk-action-bar';
 import './issue-detail-drawer';
 
-type ColumnGroup = { readonly name: string; readonly issues: readonly JiraIssue[] };
 type Toast = { readonly id: number; readonly text: string; readonly tone: 'error' | 'info' };
 type TransitionDetail = {
   readonly key: string;
@@ -21,7 +20,7 @@ type TransitionDetail = {
 type DropContainer =
   | { readonly type: 'backlog' }
   | { readonly type: 'sprint'; readonly sprintId: number }
-  | { readonly type: 'column'; readonly statusName: string };
+  | { readonly type: 'board' };
 
 const sameContainer = (a: Container | undefined, b: Container | undefined): boolean => {
   if (!a || !b || a.kind !== b.kind) return false;
@@ -67,84 +66,107 @@ export class ProjectBoard extends LitElement {
     .picker {
       display: flex;
       gap: 0.5rem;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
       flex-wrap: wrap;
     }
     .picker button {
       font: inherit;
-      padding: 0.35rem 0.75rem;
-      border: 1px solid #dfe1e6;
-      border-radius: 6px;
-      background: #fff;
+      font-size: 0.875rem;
+      padding: 0.45rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
       cursor: pointer;
+      transition:
+        background 0.15s,
+        border-color 0.15s,
+        color 0.15s;
+    }
+    .picker button:hover {
+      border-color: var(--accent);
     }
     .picker button[aria-pressed='true'] {
-      background: #0052cc;
-      border-color: #0052cc;
-      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-contrast);
+    }
+    .picker button:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+    section {
+      margin-bottom: 1.75rem;
     }
     h2 {
-      font-size: 1rem;
-      margin: 1.5rem 0 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      margin: 0 0 0.75rem;
+      color: var(--text);
+    }
+    .count {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface-2);
+      border-radius: 999px;
+      padding: 0.05rem 0.5rem;
     }
     .goal {
       font-size: 0.8125rem;
-      color: #5e6c84;
+      color: var(--text-muted);
       font-weight: 400;
-      margin-left: 0.5rem;
     }
     .list {
       display: grid;
       gap: 0.5rem;
+      min-height: 0.5rem;
     }
     .empty {
-      color: #5e6c84;
+      color: var(--text-muted);
       font-size: 0.875rem;
-      padding: 0.5rem 0;
-    }
-    .columns {
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(220px, 1fr);
-      gap: 0.75rem;
-      align-items: start;
-      overflow-x: auto;
-    }
-    .column {
-      background: #f4f5f7;
-      border-radius: 8px;
-      padding: 0.5rem;
-    }
-    .column h3 {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      color: #5e6c84;
-      margin: 0.25rem 0.25rem 0.5rem;
+      padding: 0.75rem 0.25rem;
     }
     .error {
-      color: #bf2600;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+    .skeleton {
+      color: var(--text-muted);
+      padding: 1rem 0.25rem;
     }
     .toasts {
       position: fixed;
-      right: 1rem;
-      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(1rem, env(safe-area-inset-bottom));
       display: grid;
       gap: 0.5rem;
-      z-index: 10;
+      z-index: 30;
+      width: min(92vw, 26rem);
     }
     .toast {
-      max-width: 22rem;
-      padding: 0.6rem 0.85rem;
-      border-radius: 6px;
-      font-size: 0.8125rem;
+      padding: 0.7rem 0.95rem;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
       color: #fff;
-      box-shadow: 0 4px 12px rgba(9, 30, 66, 0.25);
+      box-shadow: var(--shadow-lg);
     }
     .toast.error {
-      background: #bf2600;
+      background: var(--danger);
     }
     .toast.info {
-      background: #172b4d;
+      background: var(--text);
+      color: var(--bg);
     }
   `;
 
@@ -356,36 +378,42 @@ export class ProjectBoard extends LitElement {
     if (!sourceKey) return;
     event.preventDefault();
     event.stopPropagation();
-    if (container.type === 'column') {
-      void this.handleKanbanDrop(sourceKey, container.statusName);
+    const cleanAnchor = anchorKey === sourceKey ? undefined : anchorKey;
+    if (container.type === 'board') {
+      void this.handleBoardReorder(sourceKey, cleanAnchor);
       return;
     }
     const to: Container =
       container.type === 'backlog'
         ? { kind: 'backlog' }
         : { kind: 'sprint', sprintId: container.sprintId };
-    void this.handleScrumDrop(sourceKey, anchorKey === sourceKey ? undefined : anchorKey, to);
+    void this.handleScrumDrop(sourceKey, cleanAnchor, to);
   }
 
-  private async handleKanbanDrop(key: string, statusName: string): Promise<void> {
-    const issue = this.findIssue(key);
-    if (!this.kanban || !issue || issue.status.name === statusName) return;
-    const column = this.kanban.columns.find((candidate) => candidate.name === statusName);
-    const target: JiraStatus = {
-      id: column?.statusIds[0] ?? issue.status.id,
-      name: statusName,
-      category: this.statusesByName().get(statusName)?.category ?? issue.status.category,
-    };
+  /** Reorder a flat (Kanban) task list and persist the new rank. */
+  private async handleBoardReorder(key: string, anchorKey: string | undefined): Promise<void> {
+    if (!this.kanban) return;
+    const issues = this.kanban.issues.filter((issue) => issue.key !== key);
+    const moved = this.kanban.issues.find((issue) => issue.key === key);
+    if (!moved) return;
+    const at = anchorKey ? issues.findIndex((issue) => issue.key === anchorKey) : issues.length;
+    const index = at < 0 ? issues.length : at;
     await this.runOptimistic(
-      () => this.patchIssue(key, { status: target }),
-      async () => {
-        const { results } = await sendJson<{ results: readonly BulkResult[] }>(
-          '/api/issues/transition-bulk',
-          'POST',
-          { keys: [key], toStatusName: statusName },
-        );
-        if (!results[0]?.ok) throw new Error('move-failed');
+      () => {
+        if (this.kanban) {
+          this.kanban = {
+            issues: [...issues.slice(0, index), moved, ...issues.slice(index)],
+          };
+        }
       },
+      () =>
+        sendJson(
+          '/api/rank',
+          'POST',
+          anchorKey
+            ? { issues: [key], before: anchorKey }
+            : { issues: [key], after: issues.at(-1)?.key },
+        ),
     );
   }
 
@@ -472,13 +500,6 @@ export class ProjectBoard extends LitElement {
     void this.refocus(key);
   }
 
-  private groupColumns(data: KanbanBoardData): readonly ColumnGroup[] {
-    return data.columns.map((column) => ({
-      name: column.name,
-      issues: data.issues.filter((issue) => column.statusIds.includes(issue.status.id)),
-    }));
-  }
-
   private renderPicker() {
     if (this.boards.length < 2) return nothing;
     return html`
@@ -502,13 +523,11 @@ export class ProjectBoard extends LitElement {
 
   private renderList(issues: readonly JiraIssue[], container: DropContainer) {
     const sprintId = container.type === 'sprint' ? String(container.sprintId) : undefined;
-    const statusName = container.type === 'column' ? container.statusName : undefined;
     return html`<div
       class="list"
       data-drop-container
       data-container-type=${container.type}
       data-sprint-id=${ifDefined(sprintId)}
-      data-status-name=${ifDefined(statusName)}
       @dragover=${this.allowDrop}
       @drop=${(event: DragEvent) => this.onDrop(event, container)}
     >
@@ -553,16 +572,10 @@ export class ProjectBoard extends LitElement {
 
   private renderKanban(data: KanbanBoardData) {
     return html`
-      <div class="columns" data-testid="board-columns">
-        ${this.groupColumns(data).map(
-          (column) => html`
-            <div class="column" data-testid="board-column" data-column-name=${column.name}>
-              <h3>${column.name}</h3>
-              ${this.renderList(column.issues, { type: 'column', statusName: column.name })}
-            </div>
-          `,
-        )}
-      </div>
+      <section data-testid="board-section">
+        <h2>Tasks <span class="count">${data.issues.length}</span></h2>
+        ${this.renderList(data.issues, { type: 'board' })}
+      </section>
     `;
   }
 
@@ -579,7 +592,8 @@ export class ProjectBoard extends LitElement {
 
   override render() {
     if (this.error) return html`<p class="error" data-testid="board-error">${this.error}</p>`;
-    if (this.loading && !this.board) return html`<p data-testid="board-loading">Loading board…</p>`;
+    if (this.loading && !this.board)
+      return html`<p class="skeleton" data-testid="board-loading">Loading board…</p>`;
     return html`
       <div
         @transition=${this.onTransition}
@@ -596,7 +610,7 @@ export class ProjectBoard extends LitElement {
           ${this.renderPicker()}
           ${this.scrum ? this.renderScrum(this.scrum) : nothing}
           ${this.kanban ? this.renderKanban(this.kanban) : nothing}
-          ${this.loading ? html`<p data-testid="board-loading">Loading…</p>` : nothing}
+          ${this.loading ? html`<p class="skeleton" data-testid="board-loading">Loading…</p>` : nothing}
         </div>
         ${
           this.selectedKeys.length > 0

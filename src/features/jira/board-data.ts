@@ -1,11 +1,5 @@
-import {
-  getBoardBacklog,
-  getBoardColumns,
-  getBoardIssues,
-  getBoardSprints,
-  getSprintIssues,
-} from './client';
-import type { BoardColumn, JiraIssue, JiraSprint } from './types';
+import { getBoardBacklog, getBoardIssues, getBoardSprints, getSprintIssues } from './client';
+import type { JiraIssue, JiraSprint } from './types';
 
 /*
  * Board read-models assembled from several Jira calls so each `/api/*`
@@ -20,8 +14,8 @@ export type ScrumBoardData = {
   readonly backlog: readonly JiraIssue[];
   readonly sprints: readonly SprintWithIssues[];
 };
+/* Kanban boards are shown as a single flat task list (no status columns). */
 export type KanbanBoardData = {
-  readonly columns: readonly BoardColumn[];
   readonly issues: readonly JiraIssue[];
 };
 
@@ -48,9 +42,6 @@ export const loadKanbanData = async (
   cloudId: string,
   boardId: number,
 ): Promise<KanbanBoardData> => {
-  const [columns, issues] = await Promise.all([
-    getBoardColumns(accessToken, cloudId, boardId),
-    getBoardIssues(accessToken, cloudId, boardId),
-  ]);
-  return { columns, issues };
+  const issues = await getBoardIssues(accessToken, cloudId, boardId);
+  return { issues };
 };

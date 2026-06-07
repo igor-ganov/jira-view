@@ -17,42 +17,54 @@ export class BulkActionBar extends LitElement {
     :host {
       position: fixed;
       left: 50%;
-      bottom: 1.25rem;
+      bottom: max(1rem, env(safe-area-inset-bottom));
       transform: translateX(-50%);
-      z-index: 9;
+      z-index: 25;
+      width: max-content;
+      max-width: 94vw;
     }
     .bar {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      background: #172b4d;
-      color: #fff;
-      padding: 0.6rem 0.9rem;
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(9, 30, 66, 0.35);
+      gap: 0.6rem;
+      background: var(--text);
+      color: var(--bg);
+      padding: 0.55rem 0.7rem;
+      border-radius: 999px;
+      box-shadow: var(--shadow-lg);
     }
     .count {
-      font-size: 0.8125rem;
-      font-weight: 600;
+      font-size: 0.8rem;
+      font-weight: 650;
+      padding-left: 0.4rem;
+      white-space: nowrap;
     }
     select,
     button {
       font: inherit;
-      font-size: 0.8125rem;
-      border-radius: 6px;
+      font-size: 0.8rem;
+      min-height: 36px;
+      border-radius: 999px;
       border: none;
-      padding: 0.35rem 0.6rem;
-    }
-    button {
+      padding: 0.35rem 0.7rem;
       cursor: pointer;
     }
+    select {
+      background: color-mix(in srgb, var(--bg) 88%, var(--text));
+      color: var(--text);
+    }
     .apply {
-      background: #0052cc;
-      color: #fff;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 600;
     }
     .clear {
       background: transparent;
-      color: #b3bac5;
+      color: color-mix(in srgb, var(--bg) 70%, var(--text));
+    }
+    :focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
     }
   `;
 

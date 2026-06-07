@@ -1,6 +1,6 @@
 import {
   dragTo,
-  expectText,
+  expectAttribute,
   expectVisible,
   failMock,
   pressKey,
@@ -11,11 +11,10 @@ import {
 } from './toolkit';
 
 const card = (key: string) => `issue-card[data-issue-key="${key}"]`;
-const columnList = (name: string) =>
-  `[data-testid="board-column"][data-column-name="${name}"] [data-drop-container]`;
 const sprintList = (id: number) =>
   `[data-testid="sprint-section"][data-sprint-id="${id}"] [data-drop-container]`;
 const backlogCards = '[data-testid="backlog-section"] [data-testid="issue-card"]';
+const boardCards = '[data-testid="board-section"] [data-testid="issue-card"]';
 
 test.describe('drag and drop', () => {
   test.beforeEach(async ({ page }) => {
@@ -23,27 +22,21 @@ test.describe('drag and drop', () => {
     await seedSession(page);
   });
 
-  test('Kanban: dragging a card to another column changes its status', async ({ page }) => {
+  test('Kanban list: dragging a task reorders it and persists', async ({ page }) => {
     await visit(page, '/projects/KAN');
-    await dragTo(page, page.locator(card('KAN-1')), page.locator(columnList('In Progress')));
-    const moved = page.locator(`[data-column-name="In Progress"] ${card('KAN-1')}`);
-    await expectVisible(page, moved);
-    await expectText(
-      page,
-      page.locator(`${card('KAN-1')} [data-testid="issue-status"]`),
-      'In Progress',
-    );
+    await dragTo(page, page.locator(card('KAN-3')), page.locator(card('KAN-1')));
+    await expectAttribute(page, page.locator(boardCards).first(), 'data-issue-key', 'KAN-3');
 
     await visit(page, '/projects/KAN');
-    await expectVisible(page, page.locator(`[data-column-name="In Progress"] ${card('KAN-1')}`));
+    await expectAttribute(page, page.locator(boardCards).first(), 'data-issue-key', 'KAN-3');
   });
 
-  test('Kanban: a failed move rolls the card back to its column', async ({ page }) => {
-    await failMock(page, { method: 'POST', path: '/issue/KAN-1/transitions', status: 500 });
+  test('Kanban list: a failed reorder rolls back', async ({ page }) => {
+    await failMock(page, { method: 'PUT', path: '/issue/rank', status: 500 });
     await visit(page, '/projects/KAN');
-    await dragTo(page, page.locator(card('KAN-1')), page.locator(columnList('Done')));
+    await dragTo(page, page.locator(card('KAN-3')), page.locator(card('KAN-1')));
     await expectVisible(page, page.locator('[data-testid="toast"]'));
-    await expectVisible(page, page.locator(`[data-column-name="To Do"] ${card('KAN-1')}`));
+    await expectAttribute(page, page.locator(boardCards).first(), 'data-issue-key', 'KAN-1');
   });
 
   test('Scrum: dragging a backlog issue into a sprint moves it', async ({ page }) => {

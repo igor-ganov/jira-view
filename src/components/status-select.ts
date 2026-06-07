@@ -20,13 +20,19 @@ export class StatusSelect extends LitElement {
   static override styles = css`
     select {
       font: inherit;
-      font-size: 0.75rem;
-      padding: 0.2rem 0.4rem;
-      border: 1px solid #dfe1e6;
-      border-radius: 4px;
-      background: #fff;
-      color: #172b4d;
-      max-width: 9rem;
+      font-size: 0.78rem;
+      min-height: 32px;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text);
+      max-width: 8.5rem;
+      cursor: pointer;
+    }
+    select:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
     }
   `;
 

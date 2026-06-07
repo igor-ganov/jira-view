@@ -31,14 +31,14 @@ export type {
  * Docs: https://developer.atlassian.com/cloud/jira/software/rest/
  */
 
-/** Thrown on any non-2xx Jira response; carries the status and raw body. */
+/** Thrown on any non-2xx Jira response; carries the status, path and raw body. */
 export class JiraApiError extends Error {
   constructor(
     readonly status: number,
     readonly body: string,
-    message?: string,
+    readonly path = '',
   ) {
-    super(message ?? `Jira API error ${status}`);
+    super(`Jira API error ${status} on ${path}`);
     this.name = 'JiraApiError';
   }
 }
@@ -54,7 +54,7 @@ const jiraFetch = async <T>(accessToken: string, path: string, init?: RequestIni
   if (init?.body !== undefined) headers['content-type'] = 'application/json';
   const response = await fetch(`${JIRA_API_BASE}${path}`, { ...init, headers });
   if (!response.ok) {
-    throw new JiraApiError(response.status, await response.text());
+    throw new JiraApiError(response.status, await response.text(), path);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
