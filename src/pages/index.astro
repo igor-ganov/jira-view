@@ -1,5 +1,4 @@
 ---
-import { JiraProjects } from '@/components/jira-projects';
 import { SESSION_TOKENS_KEY } from '@/features/auth/session';
 import Base from '@/layouts/base.astro';
 
@@ -7,9 +6,9 @@ const tokens = await Astro.session?.get(SESSION_TOKENS_KEY);
 const isAuthenticated = tokens !== undefined;
 ---
 
-<Base title="Jira View — POC">
+<Base title="Jira View">
   <h1>Jira View</h1>
-  <p>A calm, unbreakable alternative to the Jira backlog UI. This POC proves the OAuth round-trip.</p>
+  <p>A calm, unbreakable alternative to the Jira backlog/board UI.</p>
 
   {
     isAuthenticated ? (
@@ -19,7 +18,10 @@ const isAuthenticated = tokens !== undefined;
             Log out
           </a>
         </p>
-        <JiraProjects client:only="lit" />
+        <jira-projects></jira-projects>
+        <script>
+          import '@/components/jira-projects';
+        </script>
       </Fragment>
     ) : (
       <a class="button" href="/auth/login">

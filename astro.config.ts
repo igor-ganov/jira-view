@@ -1,5 +1,4 @@
 import cloudflare from '@astrojs/cloudflare';
-import lit from '@astrojs/lit';
 import node from '@astrojs/node';
 import { defineConfig, envField } from 'astro/config';
 
@@ -20,7 +19,6 @@ export default defineConfig({
   ...(useCloudflare
     ? { session: { driver: 'cloudflare-kv-binding', options: { binding: 'SESSION' } } }
     : {}),
-  integrations: [lit()],
   /*
    * Server secrets are declared here so they are typed and read via
    * `astro:env/server` (never shipped to the client bundle).
