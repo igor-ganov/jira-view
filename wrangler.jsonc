@@ -2,7 +2,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jira-view",
   "compatibility_date": "2026-03-23",
-  "compatibility_flags": ["nodejs_compat"],
+  // nodejs_compat_populate_process_env is required so astro:env can read
+  // secrets/vars from process.env at runtime on Workers (without it,
+  // getSecret returns undefined and routes that use a secret 500).
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   "main": "./dist/_worker.js/index.js",
   // Astro's Cloudflare adapter emits the worker plus static assets into ./dist.
   "assets": { "directory": "./dist", "binding": "ASSETS" },

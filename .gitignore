@@ -16,3 +16,4 @@ blob-report/
 
 # local tooling
 .claude/
+.dev.vars
