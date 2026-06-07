@@ -210,12 +210,14 @@ export class ProjectBoard extends LitElement {
 
   private fail(cause: unknown): void {
     this.loading = false;
-    this.error =
-      cause instanceof ApiError
-        ? cause.code === 'jira-forbidden'
-          ? 'Your Jira app is missing the required scopes. Update JIRA_SCOPES and re-consent.'
-          : `${cause.code}${cause.detail ? `: ${cause.detail}` : ''}`
-        : 'Failed to load the board.';
+    if (!(cause instanceof ApiError)) {
+      this.error = 'Failed to load the board.';
+      return;
+    }
+    const scopeProblem = cause.code === 'jira-forbidden' || cause.code === 'jira-unauthorized';
+    this.error = scopeProblem
+      ? `Jira rejected the request (${cause.status ?? 401}) — the token is missing the board/sprint scopes. Add the granular *:jira-software scopes to the app and re-consent.${cause.detail ? ` Jira said: ${cause.detail}` : ''}`
+      : `${cause.code}${cause.detail ? `: ${cause.detail}` : ''}`;
   }
 
   private findIssue(key: string): JiraIssue | undefined {

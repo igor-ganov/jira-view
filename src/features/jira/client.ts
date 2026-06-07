@@ -84,8 +84,9 @@ type RawUser = {
   readonly displayName: string;
   readonly avatarUrls?: Readonly<Record<string, string>>;
 };
-const mapUser = (raw: RawUser | undefined): JiraUser | undefined =>
-  raw === undefined
+/* Jira returns `null` (not just absent) for an unassigned issue. */
+const mapUser = (raw: RawUser | null | undefined): JiraUser | undefined =>
+  raw == null
     ? undefined
     : {
         accountId: raw.accountId,
@@ -100,7 +101,7 @@ type RawIssue = {
     readonly summary: string;
     readonly issuetype: { readonly id: string; readonly name: string; readonly iconUrl?: string };
     readonly status: RawStatus;
-    readonly assignee?: RawUser;
+    readonly assignee?: RawUser | null;
   };
 };
 const mapIssue = (raw: RawIssue): JiraIssue => {

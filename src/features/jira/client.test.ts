@@ -72,6 +72,26 @@ describe('getBoardBacklog', () => {
       assignee: { accountId: 'a', displayName: 'Al', avatarUrl: 'x.png' },
     });
   });
+
+  it('maps an unassigned issue (assignee: null) without throwing', async () => {
+    stubFetch({
+      issues: [
+        {
+          id: '2',
+          key: 'PROJ-2',
+          fields: {
+            summary: 'Unassigned',
+            issuetype: { id: 'it', name: 'Story' },
+            status: { id: 's1', name: 'To Do', statusCategory: { key: 'new' } },
+            assignee: null,
+          },
+        },
+      ],
+    });
+    const [issue] = await getBoardBacklog('tok', 'cloud', 1);
+    expect(issue?.assignee).toBeUndefined();
+    expect(issue?.key).toBe('PROJ-2');
+  });
 });
 
 describe('JiraApiError', () => {

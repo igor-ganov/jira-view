@@ -27,14 +27,18 @@ const readError = async (response: Response): Promise<ErrorBody> => {
 };
 
 const guard = async (response: Response): Promise<void> => {
-  if (response.status === 401) {
+  if (response.ok) return;
+  const body = await readError(response);
+  /*
+   * Only OUR session being gone ('unauthenticated') warrants a re-login.
+   * A 401 forwarded from Jira ('jira-unauthorized', e.g. a scope mismatch)
+   * must surface as an error — redirecting on it causes a login loop.
+   */
+  if (response.status === 401 && body.error === 'unauthenticated') {
     globalThis.location.assign('/auth/login');
     throw new ApiError(401, 'unauthenticated');
   }
-  if (!response.ok) {
-    const body = await readError(response);
-    throw new ApiError(response.status, body.error ?? 'error', body.detail);
-  }
+  throw new ApiError(response.status, body.error ?? 'error', body.detail);
 };
 
 export const getJson = async <T>(url: string): Promise<T> => {

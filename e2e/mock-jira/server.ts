@@ -34,7 +34,8 @@ const rawIssue = (issue: MockIssue) => {
       status: status
         ? { id: status.id, name: status.name, statusCategory: { key: status.categoryKey } }
         : { id: 'unknown', name: 'Unknown', statusCategory: { key: 'new' } },
-      ...(issue.assignee ? { assignee: issue.assignee } : {}),
+      /* Real Jira sends null (not an absent key) for an unassigned issue. */
+      assignee: issue.assignee ?? null,
     },
   };
 };

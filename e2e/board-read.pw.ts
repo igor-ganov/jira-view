@@ -49,9 +49,12 @@ test.describe('board read views', () => {
     await expectCount(page, inProgress.locator('[data-testid="issue-card"]'), 1);
   });
 
-  test('a 401 from Jira bounces the user to re-login', async ({ page }) => {
+  test('a 401 from Jira shows a scope error, not a re-login loop', async ({ page }) => {
     await failMock(page, { method: 'GET', path: '/rest/agile/1.0/board', status: 401 });
     await visit(page, '/projects/PROJ');
-    await expectVisible(page, page.locator('[data-testid="mock-login"]'));
+    /* A Jira-side 401 (e.g. missing scopes) must surface as an error and
+     * keep the user on the board — redirecting would loop forever. */
+    await expectText(page, page.locator('[data-testid="board-error"]'), 'scopes');
+    await expect(page).toHaveURL(/\/projects\/PROJ/);
   });
 });
