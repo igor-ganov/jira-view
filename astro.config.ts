@@ -1,18 +1,25 @@
+import cloudflare from '@astrojs/cloudflare';
 import lit from '@astrojs/lit';
 import node from '@astrojs/node';
 import { defineConfig, envField } from 'astro/config';
 
 /*
- * POC runtime: Astro SSR on the Node standalone adapter so the OAuth
- * `code → token` exchange (which needs the client secret) runs
- * server-side on plain `astro dev`/`bun`. The reference project ships
- * on Cloudflare Workers; swapping `@astrojs/node` for
- * `@astrojs/cloudflare` is the only adapter change needed to match it
- * (see README → "Deploy to Cloudflare").
+ * Astro SSR — the OAuth `code → token` exchange (needs the client secret),
+ * the session store, and the Jira proxy all run server-side.
+ *
+ * Adapter is chosen by DEPLOY_TARGET so local dev/tests stay on the Node
+ * standalone adapter (filesystem session store) while production builds
+ * for Cloudflare Workers. On Cloudflare the session lives in a Workers KV
+ * namespace bound as `SESSION` (see wrangler.jsonc).
  */
+const useCloudflare = process.env['DEPLOY_TARGET'] === 'cloudflare';
+
 export default defineConfig({
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  adapter: useCloudflare ? cloudflare() : node({ mode: 'standalone' }),
+  ...(useCloudflare
+    ? { session: { driver: 'cloudflare-kv-binding', options: { binding: 'SESSION' } } }
+    : {}),
   integrations: [lit()],
   /*
    * Server secrets are declared here so they are typed and read via

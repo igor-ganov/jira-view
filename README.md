@@ -102,12 +102,35 @@ src/
   layouts/   base.astro
 ```
 
-## Deploy to Cloudflare (match the reference)
+## Deploy to Cloudflare Workers
 
-1. `bun add @astrojs/cloudflare`, swap `node()` → `cloudflare()` in `astro.config.ts`
-   (`output: 'server'` stays).
-2. Move `.env` values to Worker secrets (`wrangler secret put …`); update the app's callback URL.
-3. Back Astro's session storage with Workers KV (the Node filesystem store is dev-only).
+The adapter is chosen by `DEPLOY_TARGET`: local dev/tests use `@astrojs/node`
+(filesystem session store); `DEPLOY_TARGET=cloudflare` builds for Workers with the
+session in a KV namespace bound as `SESSION` (see `astro.config.ts` + `wrangler.jsonc`).
+
+One-time setup (needs an interactive Cloudflare login):
+
+```sh
+wrangler login
+# create the session KV namespace, then paste its id into wrangler.jsonc → kv_namespaces[0].id
+wrangler kv namespace create SESSION
+
+# set the server secrets (read at runtime from the Worker env)
+wrangler secret put JIRA_CLIENT_ID
+wrangler secret put JIRA_CLIENT_SECRET
+wrangler secret put JIRA_REDIRECT_URI   # https://<your-worker-domain>/auth/callback
+wrangler secret put JIRA_SCOPES         # the granular agile scopes from "Setup"
+wrangler secret put SESSION_SECRET      # any long random string
+```
+
+Then add the deployed callback URL to the Atlassian app's *Authorization* settings and:
+
+```sh
+bun run deploy        # build:cf (DEPLOY_TARGET=cloudflare astro build) + wrangler deploy
+```
+
+Public `astro:env` vars (`JIRA_API_BASE`, `ATLASSIAN_AUTH_BASE`) keep their production
+defaults (real Atlassian) — no need to set them.
 
 ## Known shortcuts (intentional, to revisit)
 

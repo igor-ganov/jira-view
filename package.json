@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro check && astro build",
+    "build:cf": "bun scripts/build-cf.ts",
+    "deploy": "bun run build:cf && bunx wrangler deploy",
     "preview": "astro preview",
     "check": "astro check",
     "lint": "biome check .",
@@ -16,6 +18,7 @@
     "mock-jira": "bun run e2e/mock-jira/server.ts"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
     "@astrojs/lit": "^4.3.0",
     "@astrojs/node": "^9.5.5",
     "@webcomponents/template-shadowroot": "^0.2.1",
