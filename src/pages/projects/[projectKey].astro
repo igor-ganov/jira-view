@@ -1,0 +1,15 @@
+---
+import { ProjectBoard } from '@/components/project-board';
+import { SESSION_TOKENS_KEY } from '@/features/auth/session';
+import Base from '@/layouts/base.astro';
+
+const { projectKey } = Astro.params;
+const tokens = await Astro.session?.get(SESSION_TOKENS_KEY);
+if (tokens === undefined) return Astro.redirect('/');
+---
+
+<Base title={`${projectKey} — Jira View`}>
+  <p><a class="link" href="/">← Projects</a></p>
+  <h1>{projectKey}</h1>
+  <ProjectBoard project-key={projectKey} client:only="lit" />
+</Base>

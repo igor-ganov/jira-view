@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.astro/
+.vite-cache/
+.astro-cache/
+.env
+.env.*
+!.env.example
+*.log
+
+# test artifacts
+test-results/
+playwright-report/
+blob-report/
+.wrangler/
+
+# local tooling
+.claude/
