@@ -17,7 +17,11 @@ export const jsonResponse = (data: unknown, status = 200): Response =>
     headers: { 'content-type': 'application/json' },
   });
 
-type JiraContext = { readonly accessToken: string; readonly cloudId: string };
+type JiraContext = {
+  readonly accessToken: string;
+  readonly cloudId: string;
+  readonly grantedScopes: readonly string[];
+};
 
 /** A still-valid access token, refreshing transparently when near expiry. */
 const ensureFreshTokens = async (
@@ -42,15 +46,16 @@ export const resolveJiraContext = async (
   if (!session || !stored) return { error: jsonResponse({ error: 'unauthenticated' }, 401) };
 
   const tokens = await ensureFreshTokens(session, stored);
+  const grantedScopes = tokens.scope ? tokens.scope.split(' ').filter(Boolean) : [];
 
   const cached = await session.get(SESSION_CLOUD_ID_KEY);
-  if (cached) return { accessToken: tokens.accessToken, cloudId: cached };
+  if (cached) return { accessToken: tokens.accessToken, cloudId: cached, grantedScopes };
 
   const resources = await getAccessibleResources(tokens.accessToken);
   const site = resources[0];
   if (!site) return { error: jsonResponse({ error: 'no-accessible-jira-site' }, 404) };
   session.set(SESSION_CLOUD_ID_KEY, site.id);
-  return { accessToken: tokens.accessToken, cloudId: site.id };
+  return { accessToken: tokens.accessToken, cloudId: site.id, grantedScopes };
 };
 
 /*
@@ -100,7 +105,10 @@ const requiredScopesFor = (path: string): readonly string[] =>
   SCOPE_RULES.find((rule) => rule.test.test(path))?.scopes ?? [];
 
 /** Map a thrown error to a JSON Response with the appropriate HTTP status. */
-export const toErrorResponse = (cause: unknown): Response => {
+export const toErrorResponse = (
+  cause: unknown,
+  grantedScopes: readonly string[] = [],
+): Response => {
   if (cause instanceof JiraApiError) {
     console.error('[jira-error]', cause.status, cause.path, cause.scopeHint, cause.body);
     const code =
@@ -112,12 +120,16 @@ export const toErrorResponse = (cause: unknown): Response => {
             ? 'jira-conflict'
             : 'jira-error';
     const httpStatus = cause.status >= 500 ? 502 : cause.status;
+    const requiredScopes = requiredScopesFor(cause.path);
+    const missingScopes = requiredScopes.filter((scope) => !grantedScopes.includes(scope));
     return jsonResponse(
       {
         error: code,
         status: cause.status,
         path: cause.path,
-        requiredScopes: requiredScopesFor(cause.path),
+        requiredScopes,
+        grantedScopes,
+        missingScopes,
         scopeHint: cause.scopeHint,
         detail: cause.body,
       },
@@ -140,6 +152,6 @@ export const withJira = async (
   try {
     return await handler(resolved);
   } catch (cause) {
-    return toErrorResponse(cause);
+    return toErrorResponse(cause, resolved.grantedScopes);
   }
 };

@@ -20,12 +20,15 @@ export type StoredTokens = {
   readonly refreshToken?: string;
   /** Epoch ms at which the access token expires. */
   readonly expiresAt: number;
+  /** Space-separated scopes actually granted to this token. */
+  readonly scope?: string;
 };
 
 /** Normalize an OAuth token response into what we persist in the session. */
 export const toStoredTokens = (tokens: OAuthTokens): StoredTokens => ({
   accessToken: tokens.access_token,
   ...(tokens.refresh_token === undefined ? {} : { refreshToken: tokens.refresh_token }),
+  ...(tokens.scope === undefined ? {} : { scope: tokens.scope }),
   expiresAt: Date.now() + tokens.expires_in * 1000,
 });
 

@@ -8,6 +8,8 @@
 export type ApiErrorInfo = {
   readonly path?: string;
   readonly requiredScopes?: readonly string[];
+  readonly grantedScopes?: readonly string[];
+  readonly missingScopes?: readonly string[];
   readonly scopeHint?: string;
   readonly detail?: string;
 };
@@ -32,6 +34,8 @@ type ErrorBody = {
   readonly detail?: string;
   readonly path?: string;
   readonly requiredScopes?: readonly string[];
+  readonly grantedScopes?: readonly string[];
+  readonly missingScopes?: readonly string[];
   readonly scopeHint?: string;
 };
 
@@ -59,6 +63,8 @@ const guard = async (response: Response): Promise<void> => {
     ...(body.detail === undefined ? {} : { detail: body.detail }),
     ...(body.path === undefined ? {} : { path: body.path }),
     ...(body.requiredScopes === undefined ? {} : { requiredScopes: body.requiredScopes }),
+    ...(body.grantedScopes === undefined ? {} : { grantedScopes: body.grantedScopes }),
+    ...(body.missingScopes === undefined ? {} : { missingScopes: body.missingScopes }),
     ...(body.scopeHint === undefined ? {} : { scopeHint: body.scopeHint }),
   });
 };

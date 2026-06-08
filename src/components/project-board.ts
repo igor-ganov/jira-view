@@ -244,13 +244,21 @@ export class ProjectBoard extends LitElement {
       this.error = `${cause.code}${cause.detail ? `: ${cause.detail}` : ''}`;
       return;
     }
-    const { path, requiredScopes, scopeHint } = cause.info;
-    const scopes =
+    const { path, requiredScopes, missingScopes, scopeHint } = cause.info;
+    const missing =
+      missingScopes && missingScopes.length > 0 ? missingScopes.join('  ') : undefined;
+    const required =
       requiredScopes && requiredScopes.length > 0 ? requiredScopes.join('  ') : undefined;
     this.error = [
       `Jira rejected  ${path ?? 'the request'}  (${cause.status}).`,
-      scopes ? `This endpoint requires these scopes:\n  ${scopes}` : undefined,
-      'Add any missing scope in the Atlassian app (Permissions → Jira API → Granular scopes), then re-consent.',
+      missing
+        ? `Your token is MISSING: ${missing}`
+        : required
+          ? `This endpoint requires: ${required}`
+          : undefined,
+      missing
+        ? 'Add it in the Atlassian app (Permissions → Jira API → Granular scopes), then Log out and Connect Jira again — new scopes only apply to a fresh token.'
+        : 'If those scopes are already added, Log out and Connect Jira again — your current token predates them.',
       scopeHint ? `Jira hint: ${scopeHint}` : undefined,
       cause.detail ? `Jira said: ${cause.detail}` : undefined,
     ]
