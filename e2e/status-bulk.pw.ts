@@ -1,5 +1,6 @@
 import {
   click,
+  expectAttribute,
   expectHidden,
   expectText,
   failMock,
@@ -10,10 +11,12 @@ import {
   visit,
 } from './toolkit';
 
-const statusOf = (key: string) =>
-  `issue-card[data-issue-key="${key}"] [data-testid="issue-status"]`;
+const selectOf = (key: string) =>
+  `issue-card[data-issue-key="${key}"] [data-testid="status-select"]`;
 const checkboxOf = (key: string) =>
   `issue-card[data-issue-key="${key}"] [data-testid="issue-select"]`;
+const expectStatus = (page: import('./toolkit').Page, key: string, name: string) =>
+  expectAttribute(page, page.locator(selectOf(key)), 'data-current', name);
 
 test.describe('bulk status change', () => {
   test.beforeEach(async ({ page }) => {
@@ -30,13 +33,13 @@ test.describe('bulk status change', () => {
     await selectOption(page, page.locator('[data-testid="bulk-status"]'), 'In Progress');
     await click(page, page.locator('[data-testid="bulk-apply"]'));
 
-    await expectText(page, page.locator(statusOf('PROJ-1')), 'In Progress');
-    await expectText(page, page.locator(statusOf('PROJ-2')), 'In Progress');
+    await expectStatus(page, 'PROJ-1', 'In Progress');
+    await expectStatus(page, 'PROJ-2', 'In Progress');
     await expectText(page, page.locator('[data-testid="toast"]'), '2 issue(s) updated');
     await expectHidden(page, page.locator('[data-testid="bulk-bar"]'));
 
     await visit(page, '/projects/PROJ');
-    await expectText(page, page.locator(statusOf('PROJ-1')), 'In Progress');
+    await expectStatus(page, 'PROJ-1', 'In Progress');
   });
 
   test('reports partial failure and rolls back only the failed issue', async ({ page }) => {
@@ -47,8 +50,8 @@ test.describe('bulk status change', () => {
     await selectOption(page, page.locator('[data-testid="bulk-status"]'), 'In Progress');
     await click(page, page.locator('[data-testid="bulk-apply"]'));
 
-    await expectText(page, page.locator(statusOf('PROJ-2')), 'In Progress');
-    await expectText(page, page.locator(statusOf('ERR-1')), 'To Do');
+    await expectStatus(page, 'PROJ-2', 'In Progress');
+    await expectStatus(page, 'ERR-1', 'To Do');
     await expectText(page, page.locator('[data-testid="toast"]'), '1 updated, 1 failed');
   });
 });

@@ -81,28 +81,6 @@ export class IssueCard extends LitElement {
       color: var(--text-muted);
       letter-spacing: 0.02em;
     }
-    .badge {
-      font-size: 0.68rem;
-      font-weight: 650;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      padding: 0.2rem 0.5rem;
-      border-radius: 999px;
-      white-space: nowrap;
-      flex: none;
-    }
-    .cat-new {
-      background: var(--cat-new-bg);
-      color: var(--cat-new-fg);
-    }
-    .cat-indeterminate {
-      background: var(--cat-prog-bg);
-      color: var(--cat-prog-fg);
-    }
-    .cat-done {
-      background: var(--cat-done-bg);
-      color: var(--cat-done-fg);
-    }
     .assignee {
       width: 26px;
       height: 26px;
@@ -177,14 +155,11 @@ export class IssueCard extends LitElement {
             ${issue.summary}
           </button>
         </div>
-        <span class="badge cat-${issue.status.category}" data-testid="issue-status">
-          ${issue.status.name}
-        </span>
         <slot name="actions"></slot>
         ${
           issue.assignee?.avatarUrl
             ? html`<img class="assignee" src=${issue.assignee.avatarUrl} alt=${issue.assignee.displayName} />`
-            : html`<span class="assignee" aria-hidden="true"></span>`
+            : nothing
         }
       </div>
     `;

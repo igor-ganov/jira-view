@@ -177,7 +177,6 @@ export class IssueDetailDrawer extends LitElement {
         <dd data-testid="drawer-type">${this.issue.issueType.name}</dd>
         <dt>Status</dt>
         <dd data-testid="drawer-status">
-          ${this.issue.status.name}
           <status-select
             .issueKey=${this.issue.key}
             .current=${this.issue.status}

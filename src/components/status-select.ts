@@ -20,19 +20,36 @@ export class StatusSelect extends LitElement {
   static override styles = css`
     select {
       font: inherit;
-      font-size: 0.78rem;
-      min-height: 32px;
-      padding: 0.25rem 0.5rem;
-      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      min-height: 30px;
+      padding: 0.2rem 0.45rem;
+      border: none;
       border-radius: 999px;
-      background: var(--surface-2);
-      color: var(--text);
-      max-width: 8.5rem;
+      max-width: 9rem;
       cursor: pointer;
+      background: var(--cat-new-bg);
+      color: var(--cat-new-fg);
+    }
+    select.cat-indeterminate {
+      background: var(--cat-prog-bg);
+      color: var(--cat-prog-fg);
+    }
+    select.cat-done {
+      background: var(--cat-done-bg);
+      color: var(--cat-done-fg);
     }
     select:focus-visible {
       outline: none;
       box-shadow: var(--focus);
+    }
+    option {
+      text-transform: none;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface);
     }
   `;
 
@@ -74,7 +91,9 @@ export class StatusSelect extends LitElement {
   override render() {
     return html`
       <select
+        class="cat-${this.current.category}"
         data-testid="status-select"
+        data-current=${this.current.name}
         aria-label=${`Change status of ${this.issueKey}`}
         @focusin=${this.ensureTransitions}
         @change=${this.onChange}
