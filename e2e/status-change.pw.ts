@@ -40,7 +40,7 @@ test.describe('single status change', () => {
   test('shows a scope hint on 403 and rolls back', async ({ page }) => {
     await failMock(page, { method: 'POST', path: '/issue/PROJ-3/transitions', status: 403 });
     await changeStatus(page, page.locator(selectOf('PROJ-3')), 'Done');
-    await expectText(page, page.locator('[data-testid="toast"]'), 'scopes');
+    await expectText(page, page.locator('[data-testid="toast"]'), 'needs:');
     await expectText(page, page.locator(statusOf('PROJ-3')), 'In Progress');
   });
 });

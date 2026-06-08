@@ -153,6 +153,17 @@ const handle = async (req: Request): Promise<Response> => {
     return json({ values: state.projects, isLast: true, total: state.projects.length });
   }
 
+  /* Core JQL search — the app reads sprint issues via `sprint = N`. */
+  if (rest.startsWith('/rest/api/3/search/jql') && method === 'GET') {
+    const jql = url.searchParams.get('jql') ?? '';
+    const sprintMatch = jql.match(/sprint\s*=\s*(\d+)/i);
+    const sprintId = sprintMatch ? Number(sprintMatch[1]) : undefined;
+    const issues = state.issues.filter(
+      (i) => i.container.kind === 'sprint' && i.container.sprintId === sprintId,
+    );
+    return json({ issues: issues.map(rawIssue), total: issues.length, isLast: true });
+  }
+
   if (rest === '/rest/agile/1.0/board' && method === 'GET') {
     const projectKey = url.searchParams.get('projectKeyOrId');
     const values = state.boards.filter((b) => !projectKey || b.projectKey === projectKey);

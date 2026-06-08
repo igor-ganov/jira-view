@@ -205,14 +205,21 @@ export const getBoardSprints = async (
   return body.values.map(mapSprint);
 };
 
+/*
+ * Sprint issues via the CORE search API (JQL `sprint = N`), not the agile
+ * `/sprint/{id}/issue` endpoint: the agile endpoint returns 401 "scope does
+ * not match" even when the granular sprint scope IS in the token (a known
+ * Atlassian bug). Core search only needs the classic `read:jira-work`.
+ */
 export const getSprintIssues = async (
   accessToken: string,
   cloudId: string,
   sprintId: number,
 ): Promise<readonly JiraIssue[]> => {
+  const jql = encodeURIComponent(`sprint = ${sprintId} ORDER BY rank`);
   const body = await jiraFetch<{ readonly issues: readonly RawIssue[] }>(
     accessToken,
-    ex(cloudId, `/rest/agile/1.0/sprint/${sprintId}/issue?maxResults=100&fields=${ISSUE_FIELDS}`),
+    ex(cloudId, `/rest/api/3/search/jql?jql=${jql}&maxResults=100&fields=${ISSUE_FIELDS}`),
   );
   return body.issues.map(mapIssue);
 };
