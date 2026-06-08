@@ -53,11 +53,56 @@ export const resolveJiraContext = async (
   return { accessToken: tokens.accessToken, cloudId: site.id };
 };
 
+/*
+ * Documented OAuth scopes per endpoint pattern (matched against the request
+ * path). Lets the UI name the EXACT scopes a failing call needs instead of
+ * guessing. Source: developer.atlassian.com Jira / Jira Software REST docs.
+ */
+const SCOPE_RULES: readonly { readonly test: RegExp; readonly scopes: readonly string[] }[] = [
+  {
+    test: /\/rest\/agile\/1\.0\/board\/\d+\/backlog/,
+    scopes: ['read:board-scope:jira-software', 'read:issue-details:jira', 'read:project:jira'],
+  },
+  {
+    test: /\/rest\/agile\/1\.0\/board\/\d+\/sprint/,
+    scopes: ['read:sprint:jira-software', 'read:board-scope:jira-software'],
+  },
+  {
+    test: /\/rest\/agile\/1\.0\/board\/\d+\/issue/,
+    scopes: ['read:board-scope:jira-software', 'read:issue-details:jira', 'read:project:jira'],
+  },
+  {
+    test: /\/rest\/agile\/1\.0\/board\/\d+\/configuration/,
+    scopes: ['read:board-scope.admin:jira-software'],
+  },
+  {
+    test: /\/rest\/agile\/1\.0\/board(\?|$)/,
+    scopes: ['read:board-scope:jira-software', 'read:project:jira'],
+  },
+  {
+    test: /\/rest\/agile\/1\.0\/sprint\/\d+\/issue/,
+    scopes: ['read:sprint:jira-software', 'read:issue-details:jira', 'write:sprint:jira-software'],
+  },
+  { test: /\/rest\/agile\/1\.0\/backlog\/issue/, scopes: ['write:board-scope:jira-software'] },
+  {
+    test: /\/rest\/agile\/1\.0\/issue\/rank/,
+    scopes: ['write:board-scope:jira-software', 'write:sprint:jira-software'],
+  },
+  {
+    test: /\/rest\/api\/3\/issue\/[^/]+\/transitions/,
+    scopes: ['read:jira-work', 'write:jira-work'],
+  },
+  { test: /\/rest\/api\/3\/issue\//, scopes: ['read:jira-work', 'read:issue-details:jira'] },
+  { test: /\/rest\/api\/3\/project\/search/, scopes: ['read:jira-work', 'read:project:jira'] },
+];
+
+const requiredScopesFor = (path: string): readonly string[] =>
+  SCOPE_RULES.find((rule) => rule.test.test(path))?.scopes ?? [];
+
 /** Map a thrown error to a JSON Response with the appropriate HTTP status. */
 export const toErrorResponse = (cause: unknown): Response => {
   if (cause instanceof JiraApiError) {
-    console.error('[jira-error]', cause.status, cause.path, cause.body);
-    const status = cause.status === 401 ? 401 : cause.status === 403 ? 403 : cause.status;
+    console.error('[jira-error]', cause.status, cause.path, cause.scopeHint, cause.body);
     const code =
       cause.status === 401
         ? 'jira-unauthorized'
@@ -66,8 +111,18 @@ export const toErrorResponse = (cause: unknown): Response => {
           : cause.status === 409
             ? 'jira-conflict'
             : 'jira-error';
-    const httpStatus = status >= 500 ? 502 : status;
-    return jsonResponse({ error: code, status: cause.status, detail: cause.body }, httpStatus);
+    const httpStatus = cause.status >= 500 ? 502 : cause.status;
+    return jsonResponse(
+      {
+        error: code,
+        status: cause.status,
+        path: cause.path,
+        requiredScopes: requiredScopesFor(cause.path),
+        scopeHint: cause.scopeHint,
+        detail: cause.body,
+      },
+      httpStatus,
+    );
   }
   return jsonResponse({ error: 'internal', detail: String(cause) }, 500);
 };

@@ -31,12 +31,14 @@ export type {
  * Docs: https://developer.atlassian.com/cloud/jira/software/rest/
  */
 
-/** Thrown on any non-2xx Jira response; carries the status, path and raw body. */
+/** Thrown on any non-2xx Jira response; carries the status, path, raw body
+ *  and Jira's `WWW-Authenticate` hint (which can name the required scope). */
 export class JiraApiError extends Error {
   constructor(
     readonly status: number,
     readonly body: string,
     readonly path = '',
+    readonly scopeHint = '',
   ) {
     super(`Jira API error ${status} on ${path}`);
     this.name = 'JiraApiError';
@@ -54,7 +56,8 @@ const jiraFetch = async <T>(accessToken: string, path: string, init?: RequestIni
   if (init?.body !== undefined) headers['content-type'] = 'application/json';
   const response = await fetch(`${JIRA_API_BASE}${path}`, { ...init, headers });
   if (!response.ok) {
-    throw new JiraApiError(response.status, await response.text(), path);
+    const scopeHint = response.headers.get('www-authenticate') ?? '';
+    throw new JiraApiError(response.status, await response.text(), path, scopeHint);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;

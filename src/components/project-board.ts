@@ -29,8 +29,9 @@ const sameContainer = (a: Container | undefined, b: Container | undefined): bool
 
 const apiErrorText = (cause: unknown): string => {
   if (cause instanceof ApiError) {
-    if (cause.code === 'jira-forbidden') {
-      return 'Missing Jira scopes — update JIRA_SCOPES and re-consent.';
+    if (cause.code === 'jira-forbidden' || cause.code === 'jira-unauthorized') {
+      const scopes = cause.info.requiredScopes?.join(', ');
+      return `Jira blocked ${cause.info.path ?? 'the request'}${scopes ? ` — needs: ${scopes}` : ''}.`;
     }
     if (cause.code === 'jira-conflict') return 'Conflict — the board changed; please retry.';
     return `Request failed (${cause.status}).`;
@@ -137,8 +138,10 @@ export class ProjectBoard extends LitElement {
       border: 1px solid var(--danger);
       border-radius: var(--radius);
       padding: 1rem 1.1rem;
-      line-height: 1.5;
-      font-size: 0.9rem;
+      line-height: 1.6;
+      font-size: 0.875rem;
+      white-space: pre-line;
+      word-break: break-word;
     }
     .skeleton {
       color: var(--text-muted);
@@ -237,9 +240,22 @@ export class ProjectBoard extends LitElement {
       return;
     }
     const scopeProblem = cause.code === 'jira-forbidden' || cause.code === 'jira-unauthorized';
-    this.error = scopeProblem
-      ? `Jira rejected the request (${cause.status ?? 401}) — the token is missing the board/sprint scopes. Add the granular *:jira-software scopes to the app and re-consent.${cause.detail ? ` Jira said: ${cause.detail}` : ''}`
-      : `${cause.code}${cause.detail ? `: ${cause.detail}` : ''}`;
+    if (!scopeProblem) {
+      this.error = `${cause.code}${cause.detail ? `: ${cause.detail}` : ''}`;
+      return;
+    }
+    const { path, requiredScopes, scopeHint } = cause.info;
+    const scopes =
+      requiredScopes && requiredScopes.length > 0 ? requiredScopes.join('  ') : undefined;
+    this.error = [
+      `Jira rejected  ${path ?? 'the request'}  (${cause.status}).`,
+      scopes ? `This endpoint requires these scopes:\n  ${scopes}` : undefined,
+      'Add any missing scope in the Atlassian app (Permissions → Jira API → Granular scopes), then re-consent.',
+      scopeHint ? `Jira hint: ${scopeHint}` : undefined,
+      cause.detail ? `Jira said: ${cause.detail}` : undefined,
+    ]
+      .filter(Boolean)
+      .join('\n');
   }
 
   private findIssue(key: string): JiraIssue | undefined {

@@ -21,6 +21,7 @@ const stubFetch = (body: unknown, ok = true, status = 200): void => {
     vi.fn(async () => ({
       ok,
       status,
+      headers: { get: () => null },
       json: async () => body,
       text: async () => JSON.stringify(body),
     })),

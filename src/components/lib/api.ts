@@ -5,18 +5,35 @@
  * carrying the server's error code + detail for the UI to surface.
  */
 
+export type ApiErrorInfo = {
+  readonly path?: string;
+  readonly requiredScopes?: readonly string[];
+  readonly scopeHint?: string;
+  readonly detail?: string;
+};
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
-    readonly detail?: string,
+    readonly info: ApiErrorInfo = {},
   ) {
     super(`API ${status}: ${code}`);
     this.name = 'ApiError';
   }
+
+  get detail(): string | undefined {
+    return this.info.detail;
+  }
 }
 
-type ErrorBody = { readonly error?: string; readonly detail?: string };
+type ErrorBody = {
+  readonly error?: string;
+  readonly detail?: string;
+  readonly path?: string;
+  readonly requiredScopes?: readonly string[];
+  readonly scopeHint?: string;
+};
 
 const readError = async (response: Response): Promise<ErrorBody> => {
   try {
@@ -38,7 +55,12 @@ const guard = async (response: Response): Promise<void> => {
     globalThis.location.assign('/auth/login');
     throw new ApiError(401, 'unauthenticated');
   }
-  throw new ApiError(response.status, body.error ?? 'error', body.detail);
+  throw new ApiError(response.status, body.error ?? 'error', {
+    ...(body.detail === undefined ? {} : { detail: body.detail }),
+    ...(body.path === undefined ? {} : { path: body.path }),
+    ...(body.requiredScopes === undefined ? {} : { requiredScopes: body.requiredScopes }),
+    ...(body.scopeHint === undefined ? {} : { scopeHint: body.scopeHint }),
+  });
 };
 
 export const getJson = async <T>(url: string): Promise<T> => {
