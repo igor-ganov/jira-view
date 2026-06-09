@@ -19,15 +19,23 @@ export type KanbanBoardData = {
   readonly issues: readonly JiraIssue[];
 };
 
+/** How many recent closed sprints to surface in the "Past sprints" block. */
+const RECENT_CLOSED = 5;
+
 export const loadScrumData = async (
   accessToken: string,
   cloudId: string,
   boardId: number,
 ): Promise<ScrumBoardData> => {
-  const [backlog, sprints] = await Promise.all([
+  const [backlog, current, closed] = await Promise.all([
     getBoardBacklog(accessToken, cloudId, boardId),
-    getBoardSprints(accessToken, cloudId, boardId),
+    getBoardSprints(accessToken, cloudId, boardId, 'active,future'),
+    getBoardSprints(accessToken, cloudId, boardId, 'closed'),
   ]);
+  /* Closed sprints can be a long history — keep only the most recent few
+     (higher id ≈ more recently created/closed). */
+  const recentClosed = [...closed].sort((a, b) => b.id - a.id).slice(0, RECENT_CLOSED);
+  const sprints = [...current, ...recentClosed];
   const sprintsWithIssues = await Promise.all(
     sprints.map(async (sprint) => ({
       sprint,

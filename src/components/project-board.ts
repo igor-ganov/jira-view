@@ -59,6 +59,7 @@ export class ProjectBoard extends LitElement {
   @state() private selectedKeys: readonly string[] = [];
   @state() private openIssueKey: string | undefined = undefined;
   @state() private collapsed: ReadonlySet<string> = new Set();
+  @state() private collapsedSections: ReadonlySet<string> = new Set(['past-sprints']);
 
   private toastSeq = 0;
 
@@ -191,6 +192,59 @@ export class ProjectBoard extends LitElement {
       padding-left: 0.85rem;
       border-left: 2px solid var(--border);
     }
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1rem;
+    }
+    .tool {
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .tool:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .tool:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+    .section-head {
+      align-items: center;
+    }
+    .section-chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: transform 0.15s;
+    }
+    .section-chevron.open {
+      transform: rotate(90deg);
+    }
+    .section-chevron:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+    [data-testid='past-sprints'] {
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      padding: 0.5rem 0.85rem 0.25rem;
+    }
     .empty {
       color: var(--text-muted);
       font-size: 0.875rem;
@@ -290,11 +344,28 @@ export class ProjectBoard extends LitElement {
       } else {
         this.kanban = await getJson<KanbanBoardData>(`/api/boards/${board.id}/kanban`);
       }
+      /* Start with every sub-task group collapsed. */
+      this.collapsed = this.collapsibleParentKeys();
     } catch (cause) {
       this.fail(cause);
     } finally {
       this.loading = false;
     }
+  }
+
+  /** Keys of issues that have at least one sub-task present in their list. */
+  private collapsibleParentKeys(): ReadonlySet<string> {
+    const issues = this.allIssues();
+    const keys = new Set(issues.map((issue) => issue.key));
+    const parents = new Set<string>();
+    for (const issue of issues) {
+      if (issue.parentKey && keys.has(issue.parentKey)) parents.add(issue.parentKey);
+    }
+    return parents;
+  }
+
+  private toggleAllGroups(): void {
+    this.collapsed = this.collapsed.size > 0 ? new Set() : this.collapsibleParentKeys();
   }
 
   private fail(cause: unknown): void {
@@ -588,6 +659,19 @@ export class ProjectBoard extends LitElement {
     void this.refocus(key);
   }
 
+  private renderToolbar() {
+    const total = this.collapsibleParentKeys().size;
+    if (total === 0) return nothing;
+    const anyCollapsed = this.collapsed.size > 0;
+    return html`
+      <div class="toolbar">
+        <button type="button" class="tool" data-testid="toggle-all" @click=${this.toggleAllGroups}>
+          ${anyCollapsed ? `⊕ Expand all (${total})` : `⊖ Collapse all (${total})`}
+        </button>
+      </div>
+    `;
+  }
+
   private renderPicker() {
     if (this.boards.length < 2) return nothing;
     return html`
@@ -677,23 +761,60 @@ export class ProjectBoard extends LitElement {
     </div>`;
   }
 
-  private renderScrum(data: ScrumBoardData) {
+  private toggleSection(key: string): void {
+    const next = new Set(this.collapsedSections);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    this.collapsedSections = next;
+  }
+
+  private renderSprintSection(entry: ScrumBoardData['sprints'][number]) {
     return html`
+      <section data-testid="sprint-section" data-sprint-id=${entry.sprint.id}>
+        <h2>
+          ${entry.sprint.name}
+          ${entry.sprint.goal ? html`<span class="goal">${entry.sprint.goal}</span>` : nothing}
+          <span class="count">${entry.issues.length}</span>
+        </h2>
+        ${this.renderList(entry.issues, { type: 'sprint', sprintId: entry.sprint.id })}
+      </section>
+    `;
+  }
+
+  private renderPastSprints(closed: readonly ScrumBoardData['sprints'][number][]) {
+    const collapsed = this.collapsedSections.has('past-sprints');
+    return html`
+      <section data-testid="past-sprints">
+        <h2 class="section-head">
+          <button
+            type="button"
+            class=${collapsed ? 'section-chevron' : 'section-chevron open'}
+            data-testid="past-sprints-toggle"
+            aria-expanded=${!collapsed}
+            aria-label=${`${collapsed ? 'Expand' : 'Collapse'} past sprints`}
+            @click=${() => this.toggleSection('past-sprints')}
+          >
+            ▸
+          </button>
+          Past sprints <span class="count">${closed.length}</span>
+        </h2>
+        ${collapsed ? nothing : closed.map((entry) => this.renderSprintSection(entry))}
+      </section>
+    `;
+  }
+
+  private renderScrum(data: ScrumBoardData) {
+    const closed = data.sprints.filter((entry) => entry.sprint.state === 'closed');
+    const active = data.sprints.filter((entry) => entry.sprint.state === 'active');
+    const future = data.sprints.filter((entry) => entry.sprint.state === 'future');
+    return html`
+      ${closed.length > 0 ? this.renderPastSprints(closed) : nothing}
+      ${active.map((entry) => this.renderSprintSection(entry))}
+      ${future.map((entry) => this.renderSprintSection(entry))}
       <section data-testid="backlog-section">
-        <h2>Backlog</h2>
+        <h2>Backlog <span class="count">${data.backlog.length}</span></h2>
         ${this.renderList(data.backlog, { type: 'backlog' })}
       </section>
-      ${data.sprints.map(
-        (entry) => html`
-          <section data-testid="sprint-section" data-sprint-id=${entry.sprint.id}>
-            <h2>
-              ${entry.sprint.name}
-              ${entry.sprint.goal ? html`<span class="goal">${entry.sprint.goal}</span>` : nothing}
-            </h2>
-            ${this.renderList(entry.issues, { type: 'sprint', sprintId: entry.sprint.id })}
-          </section>
-        `,
-      )}
     `;
   }
 
@@ -734,7 +855,7 @@ export class ProjectBoard extends LitElement {
         @bulk-clear=${this.clearSelection}
       >
         <div>
-          ${this.renderPicker()}
+          ${this.renderPicker()} ${this.renderToolbar()}
           ${this.scrum ? this.renderScrum(this.scrum) : nothing}
           ${this.kanban ? this.renderKanban(this.kanban) : nothing}
           ${this.loading ? html`<p class="skeleton" data-testid="board-loading">Loading…</p>` : nothing}

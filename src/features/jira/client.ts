@@ -200,10 +200,11 @@ export const getBoardSprints = async (
   accessToken: string,
   cloudId: string,
   boardId: number,
+  states = 'active,future',
 ): Promise<readonly JiraSprint[]> => {
   const body = await jiraFetch<{ readonly values: readonly RawSprint[] }>(
     accessToken,
-    ex(cloudId, `/rest/agile/1.0/board/${boardId}/sprint?state=active,future&maxResults=50`),
+    ex(cloudId, `/rest/agile/1.0/board/${boardId}/sprint?state=${states}&maxResults=50`),
   );
   return body.values.map(mapSprint);
 };
