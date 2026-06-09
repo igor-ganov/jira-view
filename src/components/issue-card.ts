@@ -17,10 +17,12 @@ export class IssueCard extends LitElement {
   static override styles = css`
     :host {
       display: block;
+      min-width: 0;
     }
     .card {
       display: flex;
       align-items: center;
+      min-width: 0;
       gap: 0.625rem;
       padding: 0.75rem 0.85rem;
       background: var(--surface);

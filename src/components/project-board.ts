@@ -124,6 +124,10 @@ export class ProjectBoard extends LitElement {
     }
     .list {
       display: grid;
+      /* Cap the column at the container width — without this the implicit
+         'auto' column grows to the widest card's content (long summary /
+         status name), so lists with longer content rendered wider. */
+      grid-template-columns: minmax(0, 1fr);
       gap: 0.5rem;
       min-height: 0.5rem;
     }
