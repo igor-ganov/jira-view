@@ -70,7 +70,14 @@ const { title } = Astro.props;
         }
       }
 
+      /* Tie native controls (checkbox, dropdown, scrollbar) to the chosen
+         theme — otherwise a manual override fights the OS color-scheme and
+         e.g. checkboxes render dark on a light card. */
+      :root[data-theme='light'] {
+        color-scheme: light;
+      }
       :root[data-theme='dark'] {
+        color-scheme: dark;
         --bg: #0e1116;
         --surface: #171b21;
         --surface-2: #1f242c;
