@@ -105,10 +105,12 @@ type RawIssue = {
     readonly issuetype: { readonly id: string; readonly name: string; readonly iconUrl?: string };
     readonly status: RawStatus;
     readonly assignee?: RawUser | null;
+    readonly parent?: { readonly key: string; readonly fields?: { readonly summary?: string } } | null;
   };
 };
 const mapIssue = (raw: RawIssue): JiraIssue => {
   const assignee = mapUser(raw.fields.assignee);
+  const parent = raw.fields.parent;
   return {
     id: raw.id,
     key: raw.key,
@@ -122,10 +124,11 @@ const mapIssue = (raw: RawIssue): JiraIssue => {
     },
     status: mapStatus(raw.fields.status),
     ...(assignee === undefined ? {} : { assignee }),
+    ...(parent == null ? {} : { parentKey: parent.key, parentSummary: parent.fields?.summary ?? '' }),
   };
 };
 
-const ISSUE_FIELDS = 'summary,status,assignee,issuetype';
+const ISSUE_FIELDS = 'summary,status,assignee,issuetype,parent';
 
 /* ── Read endpoints ── */
 

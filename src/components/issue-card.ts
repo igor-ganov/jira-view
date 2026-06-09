@@ -11,6 +11,7 @@ export class IssueCard extends LitElement {
   @property({ attribute: false }) issue!: JiraIssue;
   @property({ type: Boolean, reflect: true }) selected = false;
   @property({ type: Boolean }) selectable = false;
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   @state() private dragging = false;
 
@@ -33,6 +34,18 @@ export class IssueCard extends LitElement {
       transition:
         border-color 0.15s,
         transform 0.05s;
+    }
+    :host([compact]) .card {
+      padding: 0.45rem 0.7rem;
+      box-shadow: none;
+      background: var(--surface-2);
+    }
+    :host([compact]) .summary {
+      font-size: 0.82rem;
+    }
+    :host([compact]) .assignee {
+      width: 22px;
+      height: 22px;
     }
     .card:active {
       cursor: grabbing;

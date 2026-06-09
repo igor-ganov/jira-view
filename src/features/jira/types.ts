@@ -61,6 +61,9 @@ export type JiraIssue = {
   readonly issueType: { readonly id: string; readonly name: string; readonly iconUrl?: string };
   readonly status: JiraStatus;
   readonly assignee?: JiraUser;
+  /** Parent issue key (sub-task → its task, or task → its epic), if any. */
+  readonly parentKey?: string;
+  readonly parentSummary?: string;
 };
 
 export type JiraTransition = {

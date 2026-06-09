@@ -2,6 +2,7 @@ import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import type { KanbanBoardData, ScrumBoardData } from '@/features/jira/board-data';
+import { groupByParent, type IssueGroup } from '@/features/jira/grouping';
 import { type Container, locate, moveIssue, reorderBefore } from '@/features/jira/scrum-ops';
 import { DRAG_MIME, type JiraBoard, type JiraIssue, type JiraStatus } from '@/features/jira/types';
 import type { BulkResult } from '@/pages/api/issues/transition-bulk';
@@ -57,6 +58,7 @@ export class ProjectBoard extends LitElement {
   @state() private toasts: readonly Toast[] = [];
   @state() private selectedKeys: readonly string[] = [];
   @state() private openIssueKey: string | undefined = undefined;
+  @state() private collapsed: ReadonlySet<string> = new Set();
 
   private toastSeq = 0;
 
@@ -130,6 +132,64 @@ export class ProjectBoard extends LitElement {
       grid-template-columns: minmax(0, 1fr);
       gap: 0.5rem;
       min-height: 0.5rem;
+    }
+    .group {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .parent-row {
+      display: grid;
+      grid-template-columns: 1.4rem minmax(0, 1fr);
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chevron,
+    .chevron-spacer {
+      width: 1.4rem;
+      height: 1.4rem;
+    }
+    .chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      position: relative;
+      transition: transform 0.15s;
+    }
+    .chevron.open {
+      transform: rotate(90deg);
+    }
+    .chevron .kids {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-size: 0.55rem;
+      font-weight: 700;
+      min-width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
+    .chevron:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+    .subtasks {
+      display: grid;
+      gap: 0.5rem;
+      margin-left: 1.75rem;
+      padding-left: 0.85rem;
+      border-left: 2px solid var(--border);
     }
     .empty {
       color: var(--text-muted);
@@ -549,6 +609,59 @@ export class ProjectBoard extends LitElement {
     `;
   }
 
+  private renderCard(issue: JiraIssue, container: DropContainer, compact = false) {
+    return html`
+      <issue-card
+        data-issue-key=${issue.key}
+        tabindex="0"
+        .issue=${issue}
+        selectable
+        ?compact=${compact}
+        .selected=${this.selectedKeys.includes(issue.key)}
+        @dragover=${this.allowDrop}
+        @drop=${(event: DragEvent) => this.onDrop(event, container, issue.key)}
+      >
+        <status-select slot="actions" .issueKey=${issue.key} .current=${issue.status}></status-select>
+      </issue-card>
+    `;
+  }
+
+  private renderGroup(group: IssueGroup, container: DropContainer) {
+    const { issue, children } = group;
+    const collapsed = this.collapsed.has(issue.key);
+    return html`
+      <div class="group" data-testid="issue-group" data-parent-key=${issue.key}>
+        <div class="parent-row">
+          ${children.length > 0
+            ? html`<button
+                type="button"
+                class=${collapsed ? 'chevron' : 'chevron open'}
+                data-testid="group-toggle"
+                aria-expanded=${!collapsed}
+                aria-label=${`${collapsed ? 'Expand' : 'Collapse'} ${children.length} sub-task(s) of ${issue.key}`}
+                @click=${() => this.toggleCollapse(issue.key)}
+              >
+                ▸<span class="kids">${children.length}</span>
+              </button>`
+            : html`<span class="chevron-spacer"></span>`}
+          ${this.renderCard(issue, container)}
+        </div>
+        ${children.length > 0 && !collapsed
+          ? html`<div class="subtasks" data-testid="subtasks">
+              ${children.map((child) => this.renderCard(child, container, true))}
+            </div>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  private toggleCollapse(key: string): void {
+    const next = new Set(this.collapsed);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    this.collapsed = next;
+  }
+
   private renderList(issues: readonly JiraIssue[], container: DropContainer) {
     const sprintId = container.type === 'sprint' ? String(container.sprintId) : undefined;
     return html`<div
@@ -560,21 +673,7 @@ export class ProjectBoard extends LitElement {
       @drop=${(event: DragEvent) => this.onDrop(event, container)}
     >
       ${issues.length === 0 ? html`<p class="empty" data-testid="empty">No issues.</p>` : nothing}
-      ${issues.map(
-        (issue) => html`
-          <issue-card
-            data-issue-key=${issue.key}
-            tabindex="0"
-            .issue=${issue}
-            selectable
-            .selected=${this.selectedKeys.includes(issue.key)}
-            @dragover=${this.allowDrop}
-            @drop=${(event: DragEvent) => this.onDrop(event, container, issue.key)}
-          >
-            <status-select slot="actions" .issueKey=${issue.key} .current=${issue.status}></status-select>
-          </issue-card>
-        `,
-      )}
+      ${groupByParent(issues).map((group) => this.renderGroup(group, container))}
     </div>`;
   }
 
